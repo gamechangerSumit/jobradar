@@ -1,17 +1,141 @@
-import{useCallback,useEffect,useMemo,useState}from'react';
-import{Activity,BriefcaseBusiness,MapPin,Search,SlidersHorizontal,Clock3,ExternalLink,RefreshCw,LocateFixed,WifiOff}from'lucide-react';
-import{fetchJobs,fetchMeta}from'./api';
-const categories=['All categories','IT & Software','DevOps & Cloud','IT Support','Business & Management','Finance & Accounting','Sales & Marketing','Education','Healthcare','Manufacturing','Logistics & Delivery','Engineering','Human Resources','Hospitality','Retail & Customer Service','Other'];
-const age=v=>{if(!v)return'Posting date unavailable';const h=Math.floor((Date.now()-new Date(v).getTime())/36e5);return h<1?'Recently':h<24?h+'h ago':Math.floor(h/24)+'d ago';};
-export default function App(){
- const[jobs,setJobs]=useState([]),[meta,setMeta]=useState(null),[keyword,setKeyword]=useState(''),[category,setCategory]=useState(''),[city,setCity]=useState('Pune'),[type,setType]=useState(''),[hours,setHours]=useState(''),[radius,setRadius]=useState(''),[coords,setCoords]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[locMsg,setLocMsg]=useState('');
- const filters=useMemo(()=>({keyword,city,category,employmentType:type,postedWithinHours:hours,...(coords&&radius?{latitude:coords.latitude,longitude:coords.longitude,radiusKm:radius}:{})}),[keyword,city,category,type,hours,coords,radius]);
- const load=useCallback(async()=>{setLoading(true);setError('');try{const[a,b]=await Promise.all([fetchJobs(filters),fetchMeta()]);setJobs(a);setMeta(b);}catch(e){setError(e.message);}finally{setLoading(false);}},[filters]);
- useEffect(()=>{load();},[load]);
- function locate(){if(!navigator.geolocation){setLocMsg('Browser location is unavailable.');return;}navigator.geolocation.getCurrentPosition(({coords:c})=>{setCoords({latitude:c.latitude,longitude:c.longitude});setLocMsg('Location enabled. Radius search needs coordinates on job listings.');},()=>setLocMsg('Location permission denied. City search remains available.'),{timeout:10000});}
- return <div className="shell"><aside className="sidebar"><div className="mark"><Activity/></div><div className="brand">JobRadar<span>AI</span></div><p className="tagline">Opportunity, in one place.</p><div className="side-label">WORKSPACE</div><div className="nav active"><BriefcaseBusiness size={17}/>Discover jobs</div><div className="side-note"><i/><div><b>Hourly discovery</b><small>Collection interval: 60 minutes</small></div></div><div className="profile"><div className="avatar">JR</div><div><b>JobRadar workspace</b><small>Personal job search</small></div></div></aside>
- <main><header className="header"><div><div className="eyebrow">JOB DISCOVERY / OVERVIEW</div><h1>Find your next opportunity.</h1><p>Search opportunities across industries, cities and nearby locations.</p></div><button className="refresh" onClick={load} disabled={loading}><RefreshCw size={15}/>Refresh</button></header>
- <section className="stats"><div className="stat"><span className="stat-icon blue"><BriefcaseBusiness size={17}/></span><small>Jobs in database</small><strong>{(meta?.totalJobs||0).toLocaleString()}</strong><em>Across connected sources</em></div><div className="stat"><span className="stat-icon purple"><MapPin size={17}/></span><small>Search location</small><strong className="text-stat">{city||'Anywhere'}</strong><em>City and nearby areas</em></div><div className="stat"><span className="stat-icon green"><Clock3 size={17}/></span><small>Collection frequency</small><strong className="text-stat">Every hour</strong><em>Automatic source polling</em></div></section>
- <section className="panel"><div className="panel-head"><div><h2>Explore opportunities</h2><p>Search by role, company, skill or category.</p></div><span className="status"><i/>SOURCE CONNECTORS</span></div><div className="search-row"><label className="search"><Search size={17}/><input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="Job title, company or skill"/></label><label className="city"><MapPin size={16}/><input value={city} onChange={e=>setCity(e.target.value)} placeholder="City or area"/></label><button className="locate" onClick={locate}><LocateFixed size={15}/>Near me</button></div>{locMsg&&<div className="loc-msg">{locMsg}</div>}<div className="filters"><label><SlidersHorizontal size={14}/><select value={category} onChange={e=>setCategory(e.target.value)}>{categories.map((c,i)=><option key={c} value={i===0?'':c}>{c}</option>)}</select></label><label><select value={type} onChange={e=>setType(e.target.value)}><option value="">Any employment type</option>{['Full-time','Part-time','Contract','Internship','Temporary'].map(x=><option key={x}>{x}</option>)}</select></label><label><select value={hours} onChange={e=>setHours(e.target.value)}><option value="">Any posting date</option><option value="24">Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option></select></label><label><select value={radius} onChange={e=>setRadius(e.target.value)} disabled={!coords}><option value="">Any distance</option>{[5,10,25,50].map(x=><option value={x} key={x}>Within {x} km</option>)}</select></label></div></section>
- <section className="results"><div className="results-head"><div><h2>Latest opportunities</h2><p>{jobs.length} matching listings · newest first</p></div><span className="chip"><Activity size={13}/>Indexed jobs</span></div>{error?<div className="empty error"><WifiOff/><b>Backend connection issue</b><p>{error}. Start Docker Compose and refresh.</p></div>:loading?<div className="empty"><RefreshCw/>Loading opportunities…</div>:jobs.length===0?<div className="empty"><Search/><b>No matching jobs yet</b><p>Connect an authorized source in the backend configuration to start discovering real vacancies.</p></div>:<div className="job-list">{jobs.map(j=><article className="job" key={j.id}><div className="company-icon">{(j.company||j.source||'J').slice(0,1).toUpperCase()}</div><div className="job-main"><div className="job-top"><span className="category">{j.category||'Other'}</span><time>{age(j.postedAt||j.discoveredAt)}</time></div><h3>{j.title}</h3><div className="company">{j.company||'Company not provided'}</div><div className="details"><span><MapPin size={13}/>{j.location||j.city||'Location not provided'}</span>{j.employmentType&&<span>{j.employmentType}</span>}{j.experienceLevel&&<span>{j.experienceLevel}</span>}{j.distanceKm!=null&&<span>{j.distanceKm.toFixed(1)} km away</span>}</div><p className="description">{j.description||'No description provided by source.'}</p><div className="job-foot">{j.source==='Adzuna'?<a className="adzuna-attribution" href="https://www.adzuna.in/" target="_blank" rel="noreferrer">Adzuna</a>:<small>SOURCE · {j.source}</small>}</div></div><a className="apply" href={j.applyUrl||'#'} target="_blank" rel="noreferrer">Apply <ExternalLink size={14}/></a></article>)}</div>}</section><footer>JobRadar AI · Opportunities across every category.<span>Indexed listings: {meta?.totalJobs??'—'}</span></footer></main></div>;
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Activity, BriefcaseBusiness, MapPin, Search, SlidersHorizontal, Clock3,
+  ExternalLink, RefreshCw, LocateFixed, WifiOff, Bookmark, BookmarkCheck,
+  LayoutDashboard, ClipboardList, X, CheckCircle2, Filter
+} from 'lucide-react';
+import { fetchJobs, fetchMeta } from './api';
+
+const categories = [
+  'All categories','IT & Software','DevOps & Cloud','IT Support','Business & Management',
+  'Finance & Accounting','Sales & Marketing','Education','Healthcare','Manufacturing',
+  'Logistics & Delivery','Engineering','Human Resources','Hospitality',
+  'Retail & Customer Service','Construction','Legal','Design & Creative',
+  'Customer Support','Operations','Other'
+];
+const statuses = ['Interested','Applied','Interview','Offer','Rejected'];
+const STORE_KEY = 'jobradar-workspace-v1';
+const age = value => {
+  if (!value) return 'Posting date unavailable';
+  const hours = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 3600000));
+  return hours < 1 ? 'Recently' : hours < 24 ? hours + 'h ago' : Math.floor(hours / 24) + 'd ago';
+};
+function readWorkspace() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{"saved":[],"tracking":{}}'); }
+  catch { return { saved: [], tracking: {} }; }
+}
+export default function App() {
+  const [jobs,setJobs] = useState([]);
+  const [meta,setMeta] = useState(null);
+  const [workspace,setWorkspace] = useState(readWorkspace);
+  const [view,setView] = useState('discover');
+  const [keyword,setKeyword] = useState('');
+  const [category,setCategory] = useState('');
+  const [city,setCity] = useState('Pune');
+  const [type,setType] = useState('');
+  const [hours,setHours] = useState('');
+  const [radius,setRadius] = useState('');
+  const [coords,setCoords] = useState(null);
+  const [loading,setLoading] = useState(false);
+  const [error,setError] = useState('');
+  const [locMsg,setLocMsg] = useState('');
+  const [statusFilter,setStatusFilter] = useState('');
+
+  useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(workspace)); }, [workspace]);
+  const filters = useMemo(() => ({
+    keyword, city, category, employmentType:type, postedWithinHours:hours,
+    ...(coords && radius ? { latitude:coords.latitude, longitude:coords.longitude, radiusKm:radius } : {})
+  }),[keyword,city,category,type,hours,coords,radius]);
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
+    try { const [list,info] = await Promise.all([fetchJobs(filters),fetchMeta()]); setJobs(list); setMeta(info); }
+    catch (e) { setError(e.message || 'Could not connect to JobRadar API.'); }
+    finally { setLoading(false); }
+  },[filters]);
+  useEffect(() => { load(); },[load]);
+
+  const savedIds = new Set(workspace.saved);
+  const trackedCount = Object.keys(workspace.tracking).length;
+  const visibleJobs = useMemo(() => {
+    let result = jobs;
+    if (view === 'saved') result = result.filter(job => savedIds.has(job.id));
+    if (view === 'tracker') result = result.filter(job => workspace.tracking[job.id]);
+    if (statusFilter) result = result.filter(job => workspace.tracking[job.id] === statusFilter);
+    return result;
+  },[jobs,view,workspace,statusFilter]);
+  function toggleSaved(id) {
+    setWorkspace(old => ({...old,saved:old.saved.includes(id)?old.saved.filter(x=>x!==id):[...old.saved,id]}));
+  }
+  function updateStatus(id,value) {
+    setWorkspace(old => {
+      const tracking = {...old.tracking};
+      if (!value) delete tracking[id]; else tracking[id] = value;
+      return {...old,tracking};
+    });
+  }
+  function locate() {
+    if (!navigator.geolocation) { setLocMsg('Browser location is unavailable.'); return; }
+    navigator.geolocation.getCurrentPosition(({coords:c}) => {
+      setCoords({latitude:c.latitude,longitude:c.longitude});
+      setLocMsg('Your location is enabled. Choose a radius to filter jobs with available coordinates.');
+    },() => setLocMsg('Location permission denied. City search is still available.'),{timeout:10000});
+  }
+  const title = view === 'saved' ? 'Saved opportunities' : view === 'tracker' ? 'Application tracker' : 'Latest opportunities';
+  return <div className="shell">
+    <aside className="sidebar">
+      <div className="mark"><Activity/></div><div className="brand">JobRadar<span>AI</span></div>
+      <p className="tagline">Opportunity, in one place.</p>
+      <div className="side-label">WORKSPACE</div>
+      <button className={'nav '+(view==='discover'?'active':'')} onClick={()=>setView('discover')}><LayoutDashboard size={17}/>Discover jobs</button>
+      <button className={'nav '+(view==='saved'?'active':'')} onClick={()=>setView('saved')}><Bookmark size={17}/>Saved jobs <span className="nav-count">{workspace.saved.length}</span></button>
+      <button className={'nav '+(view==='tracker'?'active':'')} onClick={()=>setView('tracker')}><ClipboardList size={17}/>Application tracker <span className="nav-count">{trackedCount}</span></button>
+      <div className="side-note"><i/><div><b>Automatic discovery</b><small>Configured sources poll hourly</small></div></div>
+      <div className="profile"><div className="avatar">JR</div><div><b>Personal workspace</b><small>Saved locally in this browser</small></div></div>
+    </aside>
+    <main>
+      <header className="header"><div><div className="eyebrow">JOB DISCOVERY / {view.toUpperCase()}</div><h1>Find your next opportunity.</h1><p>Explore jobs across industries, cities and nearby locations.</p></div><button className="refresh" onClick={load} disabled={loading}><RefreshCw size={15}/>Refresh</button></header>
+      <section className="stats">
+        <div className="stat"><span className="stat-icon blue"><BriefcaseBusiness size={17}/></span><small>Jobs in database</small><strong>{(meta?.totalJobs||0).toLocaleString()}</strong><em>Across connected sources</em></div>
+        <div className="stat"><span className="stat-icon purple"><BookmarkCheck size={17}/></span><small>Saved opportunities</small><strong>{workspace.saved.length}</strong><em>Stored on this browser</em></div>
+        <div className="stat"><span className="stat-icon green"><ClipboardList size={17}/></span><small>Applications tracked</small><strong>{trackedCount}</strong><em>Interested through offer</em></div>
+      </section>
+      {view==='discover' && <section className="panel">
+        <div className="panel-head"><div><h2>Explore opportunities</h2><p>Search by role, company, skill, industry or location.</p></div><span className="status"><i/>SOURCE CONNECTORS</span></div>
+        <div className="search-row"><label className="search"><Search size={17}/><input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="Job title, company or skill"/></label><label className="city"><MapPin size={16}/><input value={city} onChange={e=>setCity(e.target.value)} placeholder="City or area"/></label><button className="locate" onClick={locate}><LocateFixed size={15}/>Near me</button></div>
+        {locMsg && <div className="loc-msg">{locMsg}</div>}
+        <div className="filters">
+          <label><SlidersHorizontal size={14}/><select value={category} onChange={e=>setCategory(e.target.value)}>{categories.map((c,i)=><option key={c} value={i===0?'':c}>{c}</option>)}</select></label>
+          <label><select value={type} onChange={e=>setType(e.target.value)}><option value="">Any employment type</option>{['Full-time','Part-time','Contract','Internship','Temporary','Freelance'].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label><select value={hours} onChange={e=>setHours(e.target.value)}><option value="">Any posting date</option><option value="24">Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option></select></label>
+          <label><select value={radius} onChange={e=>setRadius(e.target.value)} disabled={!coords}><option value="">Any distance</option>{[5,10,25,50,100].map(x=><option value={x} key={x}>Within {x} km</option>)}</select></label>
+        </div>
+      </section>}
+      <section className="results">
+        <div className="results-head"><div><h2>{title}</h2><p>{visibleJobs.length} listings shown · newest first</p></div>
+          {view==='tracker' ? <label className="tracker-filter"><Filter size={13}/><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="">All statuses</option>{statuses.map(s=><option key={s}>{s}</option>)}</select></label> : <span className="chip"><Activity size={13}/>Indexed jobs</span>}
+        </div>
+        {error ? <div className="empty error"><WifiOff/><b>Backend connection issue</b><p>{error}. Start Docker Compose and refresh.</p></div>
+        : loading ? <div className="empty"><RefreshCw/>Loading opportunities…</div>
+        : visibleJobs.length===0 ? <div className="empty"><Search/><b>{view==='saved'?'No saved jobs yet':view==='tracker'?'No applications tracked yet':'No matching jobs yet'}</b><p>{view==='discover'?'Connect an authorized job source in backend configuration to discover real vacancies.': 'Save a job or set its application status from Discover jobs. Your workspace is saved in this browser.'}</p><button className="empty-action" onClick={()=>setView('discover')}>Explore jobs</button></div>
+        : <div className="job-list">{visibleJobs.map(job=><article className="job" key={job.id}>
+          <div className="company-icon">{(job.company||job.source||'J').slice(0,1).toUpperCase()}</div>
+          <div className="job-main">
+            <div className="job-top"><span className="category">{job.category||'Other'}</span><time>{age(job.postedAt||job.discoveredAt)}</time></div>
+            <h3>{job.title}</h3><div className="company">{job.company||'Company not provided'}</div>
+            <div className="details"><span><MapPin size={13}/>{job.location||job.city||'Location not provided'}</span>{job.employmentType&&<span>{job.employmentType}</span>}{job.experienceLevel&&<span>{job.experienceLevel}</span>}{job.distanceKm!=null&&<span>{job.distanceKm.toFixed(1)} km away</span>}</div>
+            <p className="description">{job.description||'No description provided by source.'}</p>
+            <div className="job-foot">{job.source==='Adzuna'?<a className="adzuna-attribution" href="https://www.adzuna.in/" target="_blank" rel="noreferrer">Adzuna</a>:<small>SOURCE · {job.source}</small>}
+              {workspace.tracking[job.id]&&<span className="tracked-label">{workspace.tracking[job.id]}</span>}
+            </div>
+          </div>
+          <div className="job-actions">
+            <button className={'save-job '+(savedIds.has(job.id)?'saved':'')} title={savedIds.has(job.id)?'Remove saved job':'Save job'} onClick={()=>toggleSaved(job.id)}>{savedIds.has(job.id)?<BookmarkCheck size={15}/>:<Bookmark size={15}/>}</button>
+            <select className="status-select" aria-label="Application status" value={workspace.tracking[job.id]||''} onChange={e=>updateStatus(job.id,e.target.value)}><option value="">Track status</option>{statuses.map(s=><option key={s}>{s}</option>)}</select>
+            <a className="apply" href={job.applyUrl||'#'} target="_blank" rel="noreferrer">Apply <ExternalLink size={14}/></a>
+          </div>
+        </article>)}</div>}
+      </section>
+      <footer>JobRadar AI · Discover responsibly across every category.<span>Listings: {meta?.totalJobs??'—'} · Workspace is browser-local</span></footer>
+    </main>
+  </div>;
 }
