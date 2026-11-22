@@ -1,3 +1,19 @@
-const BASE=import.meta.env.VITE_API_URL||'http://localhost:8080/api';
-export async function fetchMeta(){const r=await fetch(BASE+'/meta');if(!r.ok)throw new Error('Backend unavailable');return r.json();}
-export async function fetchJobs(filters={}){const p=new URLSearchParams();Object.entries(filters).forEach(([k,v])=>{if(v!==''&&v!=null)p.set(k,v)});const r=await fetch(BASE+'/jobs?'+p);if(!r.ok)throw new Error('Could not load jobs. Check backend.');return r.json();}
+const BASE = import.meta.env.VITE_API_URL || '/api';
+async function request(path, options = {}) {
+  const response = await fetch(BASE + path, options);
+  if (!response.ok) {
+    let message = 'Request failed (' + response.status + ')';
+    try { const body = await response.json(); message = body.message || body.error || message; }
+    catch { /* non-JSON response */ }
+    throw new Error(message);
+  }
+  return response.json();
+}
+export function fetchMeta() { return request('/meta'); }
+export function fetchJobs(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) params.set(key, value);
+  });
+  return request('/jobs?' + params.toString());
+}

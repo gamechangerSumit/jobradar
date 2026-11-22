@@ -1,33 +1,59 @@
 # JobRadar AI
-Multi-category job discovery for Pune, nearby localities and other selectable cities.
 
-## Stack
-- React + Vite dashboard
-- Spring Boot 3 / Java 21 REST API
-- PostgreSQL + Flyway migrations
-- Docker Compose
-- Hourly collection scheduler and provider connector interface
+Multi-category job discovery for Pune, nearby localities and other selectable cities. Built with React + Vite, Spring Boot 3 / Java 21, PostgreSQL, Flyway and Docker Compose.
 
-## Run locally
-1. Copy `.env.example` to `.env` and set a local database password.
-2. Run `docker compose up --build`.
-3. Dashboard: http://localhost:8081
-4. API metadata: http://localhost:8080/api/meta
-5. Health: http://localhost:8080/actuator/health
+## Features
+- Search by role, company, skills, city, locality, category and employment type.
+- Broad industry categories: IT, DevOps/cloud, support, business, finance, sales, healthcare, education, manufacturing, logistics, engineering, HR, hospitality, retail and more.
+- Optional browser geolocation and radius filtering when listings have coordinates.
+- Saved jobs and application status tracking (Interested, Applied, Interview, Offer, Rejected). These are stored in this browser's local storage and are not synced between devices/users.
+- Scheduled source collection, source/external-ID deduplication and optional Adzuna integration.
+- Token-protected manual collection endpoint.
+- Nginx reverse proxy, API health check and GitHub Actions CI.
 
-## Adzuna live job source
-1. Register for an API ID and key at https://developer.adzuna.com/.
-2. Add them to `.env` as `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
-3. Set `ADZUNA_ENABLED=true`, then rebuild with `docker compose up --build -d`.
-4. The collector queries Pune and a configurable nearby radius once per hour, normalizes categories, and stores results by stable source ID.
+## Run on Windows PowerShell
+```powershell
+git clone https://github.com/gamechangerSumit/jobradar.git
+cd jobradar
+Copy-Item .env.example .env
+```
+Set a strong local `POSTGRES_PASSWORD` in `.env`, then run:
+```powershell
+docker compose up --build -d
+docker compose ps
+docker compose logs -f backend
+```
+Open dashboard at http://localhost:8081. API metadata: http://localhost:8081/api/meta. Health: http://localhost:8081/actuator/health.
 
-The Adzuna connector is disabled until credentials are supplied. The official API is intended for evaluation on its free tier; confirm your account limits and current terms. Displayed Adzuna listings must retain the required Adzuna attribution and outbound link.
+Stop with `docker compose down`. To delete the database and all collected jobs, use `docker compose down -v`.
 
-## Search API
-`GET /api/jobs` supports keyword, city, category, employmentType, experience, postedWithinHours, latitude, longitude, radiusKm and limit. Radius filtering requires listing coordinates; text-based city/locality search remains available.
+## Real job data (Adzuna)
+Register at https://developer.adzuna.com/, review the current terms and limits, and add credentials only to local `.env`:
+```dotenv
+ADZUNA_ENABLED=true
+ADZUNA_APP_ID=your_app_id
+ADZUNA_APP_KEY=your_app_key
+ADZUNA_COUNTRY=in
+ADZUNA_CITY=Pune
+ADZUNA_RADIUS_KM=25
+```
+Then rebuild: `docker compose up --build -d`. Collection starts shortly after backend startup and repeats hourly. Adzuna is the only implemented live source; with no provider configured the app runs but will not show imported vacancies. Keep required Adzuna attribution and outbound links. Do not scrape or republish data unless source terms permit it.
 
-## More sources
-Implement additional permitted API/RSS/company-career providers through `JobSourceConnector`. Do not assume unrestricted scraping or fabricate vacancies.
+## Manual collection
+Set a long random `JOBRADAR_ADMIN_TOKEN` in `.env` and restart. Call:
+```powershell
+$headers = @{ "X-JobRadar-Admin-Token" = "your-token" }
+Invoke-RestMethod -Method Post -Uri http://localhost:8081/api/admin/collect -Headers $headers
+```
+The endpoint is disabled if the token is unset. Keep it secret.
 
-## Production
-Add authentication, HTTPS, secrets management, rate limiting, restrictive CORS and private database networking before public deployment.
+## API
+- `GET /api/meta` — metadata and indexed job count.
+- `GET /api/jobs` — keyword, city, category, employmentType, experience, postedWithinHours, latitude, longitude, radiusKm and limit.
+- `POST /api/admin/collect` — manual collection; requires `X-JobRadar-Admin-Token`.
+
+## Add another source
+Implement the Spring `JobSourceConnector` interface as a component. Return normalized `JobListing` records with stable source-specific IDs. Use only APIs/feeds whose terms permit this use.
+
+## Production checklist
+Before public deployment add user authentication, per-user saved-job/application persistence, HTTPS, managed secrets, rate limiting, restrictive CORS, private DB networking, backups, monitoring and provider compliance review. Browser-local workspace data is not a multi-user account system.

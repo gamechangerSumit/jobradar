@@ -19,6 +19,8 @@ management:
       exposure:
         include: health,info
 jobradar:
+  admin:
+    token: ${JOBRADAR_ADMIN_TOKEN:}
   cors:
     allowed-origins: ${JOBRADAR_CORS_ORIGINS:http://localhost:5173}
   collection:
