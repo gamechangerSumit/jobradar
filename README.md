@@ -6,6 +6,7 @@ Multi-category job discovery for Pune, nearby localities and other selectable ci
 - Spring Boot 3 / Java 21 REST API
 - PostgreSQL + Flyway migrations
 - Docker Compose
+- Hourly collection scheduler and provider connector interface
 
 ## Run locally
 1. Copy `.env.example` to `.env` and set a local database password.
@@ -23,7 +24,9 @@ Examples:
 - `/api/jobs?latitude=18.5204&longitude=73.8567&radiusKm=10`
 
 ## Live data
-The current foundation stores and searches listings but does not yet include a live provider integration. A permitted API/RSS/company-career connector must be added before real jobs populate the dashboard. Radius filtering also requires coordinates on each listing; text-based city/locality search works without geocoding.
+The scheduled collector and `JobSourceConnector` interface are ready, but no live provider is enabled yet. Implement a provider using an API, RSS/feed, or company career integration whose terms permit collection. Each record should have a stable external ID and normalized location/category. Do not assume unrestricted scraping or fabricate vacancies.
+
+Radius filtering requires coordinates on each listing; text-based city/locality search works without geocoding. Add a permitted geocoder to enrich records when necessary.
 
 ## Production
 Add authentication, HTTPS, secrets management, rate limiting, restrictive CORS and private database networking before public deployment.
