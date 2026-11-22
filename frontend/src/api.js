@@ -1,0 +1,3 @@
+const BASE=import.meta.env.VITE_API_URL||'http://localhost:8080/api';
+export async function fetchMeta(){const r=await fetch(BASE+'/meta');if(!r.ok)throw new Error('Backend unavailable');return r.json();}
+export async function fetchJobs(filters={}){const p=new URLSearchParams();Object.entries(filters).forEach(([k,v])=>{if(v!==''&&v!=null)p.set(k,v)});const r=await fetch(BASE+'/jobs?'+p);if(!r.ok)throw new Error('Could not load jobs. Check backend.');return r.json();}
