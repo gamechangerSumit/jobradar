@@ -1,0 +1,23 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: jobradar-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/jobradar}
+    username: ${SPRING_DATASOURCE_USERNAME:jobradar}
+    password: ${SPRING_DATASOURCE_PASSWORD:jobradar}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+jobradar:
+  cors:
+    allowed-origins: ${JOBRADAR_CORS_ORIGINS:http://localhost:5173}
