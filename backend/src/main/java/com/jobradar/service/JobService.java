@@ -15,12 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class JobService {
     private final JobListingRepository repository;
-
     public JobService(JobListingRepository repository) { this.repository = repository; }
 
     public List<JobResponse> search(String keyword, String city, String category, String type,
             String experience, Integer hours, Double latitude, Double longitude,
-            Double radiusKm, int limit) {
+            Double radiusKm, Integer minSalary, Integer maxSalary, int offset, int limit) {
         Specification<JobListing> spec = (root, query, cb) -> cb.conjunction();
         if (has(keyword)) {
             String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
@@ -52,14 +51,21 @@ public class JobService {
             OffsetDateTime cutoff = OffsetDateTime.now().minusHours(hours);
             spec = spec.and((r, q, cb) -> cb.greaterThanOrEqualTo(r.get("postedAt"), cutoff));
         }
+        if (minSalary != null && minSalary > 0) {
+            spec = spec.and((r, q, cb) -> cb.or(
+                    cb.greaterThanOrEqualTo(r.get("salaryMax"), minSalary.doubleValue()),
+                    cb.greaterThanOrEqualTo(r.get("salaryMin"), minSalary.doubleValue())));
+        }
+        if (maxSalary != null && maxSalary > 0) {
+            spec = spec.and((r, q, cb) -> cb.or(
+                    cb.lessThanOrEqualTo(r.get("salaryMin"), maxSalary.doubleValue()),
+                    cb.lessThanOrEqualTo(r.get("salaryMax"), maxSalary.doubleValue())));
+        }
 
         boolean hasCoordinates = latitude != null && longitude != null;
         boolean applyRadius = hasCoordinates && radiusKm != null && radiusKm > 0;
         List<JobListing> matches = repository.findAll(spec,
                 Sort.by(Sort.Order.desc("postedAt"), Sort.Order.desc("discoveredAt")));
-
-        // Apply the distance filter before the result cap so nearby matches are not hidden
-        // by newer jobs outside the requested radius.
         if (applyRadius) {
             matches = matches.stream()
                     .filter(job -> job.getLatitude() != null && job.getLongitude() != null)
@@ -67,8 +73,9 @@ public class JobService {
                             job.getLatitude(), job.getLongitude()) <= radiusKm)
                     .toList();
         }
-        int safeLimit = Math.max(1, Math.min(limit, 500));
-        return matches.stream().limit(safeLimit)
+        int safeOffset = Math.max(0, Math.min(offset, 100000));
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        return matches.stream().skip(safeOffset).limit(safeLimit)
                 .map(job -> JobResponse.from(job,
                         hasCoordinates && job.getLatitude() != null && job.getLongitude() != null
                                 ? GeoDistance.betweenKm(latitude, longitude,
@@ -78,6 +85,5 @@ public class JobService {
     }
 
     public long count() { return repository.count(); }
-
     private boolean has(String value) { return value != null && !value.isBlank(); }
 }

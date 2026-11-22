@@ -6,10 +6,7 @@ import java.security.MessageDigest;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
@@ -26,7 +23,8 @@ public class CollectionAdminController {
 
     @PostMapping("/collect")
     public Map<String, Object> collect(
-            @RequestHeader(value = "X-JobRadar-Admin-Token", required = false) String token) {
+            @RequestHeader(value = "X-JobRadar-Admin-Token", required = false) String token,
+            @RequestParam(required = false) String city) {
         if (adminToken.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "Manual collection is disabled. Configure JOBRADAR_ADMIN_TOKEN.");
@@ -35,8 +33,13 @@ public class CollectionAdminController {
                 token.getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid admin token.");
         }
-        int processed = collectionService.collect();
-        return Map.of("processed", processed, "configuredSources", collectionService.configuredSourceCount(),
+        if (city != null && (city.isBlank() || city.length() > 100)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "City must contain 1-100 characters.");
+        }
+        int processed = collectionService.collect(city);
+        return Map.of("processed", processed,
+                "configuredSources", collectionService.configuredSourceCount(),
+                "city", city == null || city.isBlank() ? "configured default" : city.trim(),
                 "message", "Collection run completed.");
     }
 }

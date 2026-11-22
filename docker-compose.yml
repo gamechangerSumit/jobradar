@@ -6,10 +6,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-jobradar}
       POSTGRES_USER: ${POSTGRES_USER:-jobradar}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobradar}
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobradar} -d ${POSTGRES_DB:-jobradar}"]
       interval: 10s
@@ -23,24 +21,19 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-jobradar}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-jobradar}
       JOBRADAR_CORS_ORIGINS: http://localhost:5173,http://localhost:8081
-      JOBRADAR_ADMIN_TOKEN: ${JOBRADAR_ADMIN_TOKEN:-}
       ADZUNA_ENABLED: ${ADZUNA_ENABLED:-false}
       ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}
       ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
       ADZUNA_COUNTRY: ${ADZUNA_COUNTRY:-in}
       ADZUNA_CITY: ${ADZUNA_CITY:-Pune}
       ADZUNA_RADIUS_KM: ${ADZUNA_RADIUS_KM:-25}
-    ports:
-      - "8080:8080"
+    ports: ["8080:8080"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres: {condition: service_healthy}
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "8081:80"
-    depends_on:
-      - backend
+    ports: ["8081:80"]
+    depends_on: [backend]
 volumes:
   postgres_data:
