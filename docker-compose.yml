@@ -21,6 +21,11 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-jobradar}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-jobradar}
       JOBRADAR_CORS_ORIGINS: http://localhost:5173,http://localhost:8081
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
+      ADZUNA_COUNTRY: ${ADZUNA_COUNTRY:-in}
+      ADZUNA_CITY: ${ADZUNA_CITY:-Pune}
+      ADZUNA_RADIUS_KM: ${ADZUNA_RADIUS_KM:-25}
     ports: ["8080:8080"]
     depends_on:
       postgres: {condition: service_healthy}

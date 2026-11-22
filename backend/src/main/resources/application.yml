@@ -24,3 +24,10 @@ jobradar:
   collection:
     interval-ms: ${JOBRADAR_COLLECTION_INTERVAL_MS:3600000}
     initial-delay-ms: ${JOBRADAR_COLLECTION_INITIAL_DELAY_MS:30000}
+  sources:
+    adzuna:
+      app-id: ${ADZUNA_APP_ID:}
+      app-key: ${ADZUNA_APP_KEY:}
+      country: ${ADZUNA_COUNTRY:in}
+      city: ${ADZUNA_CITY:Pune}
+      radius-km: ${ADZUNA_RADIUS_KM:25}
