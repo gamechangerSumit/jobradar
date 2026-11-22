@@ -6,6 +6,8 @@ Multi-category job discovery for Pune, nearby localities and other selectable ci
 - Search by role, company, skills, city, locality, category and employment type.
 - Broad industry categories: IT, DevOps/cloud, support, business, finance, sales, healthcare, education, manufacturing, logistics, engineering, HR, hospitality, retail and more.
 - Optional browser geolocation and radius filtering when listings have coordinates.
+- Salary range extraction and min/max salary filters when the provider supplies salary data.
+- Paginated discovery (20 results per page) and on-demand city scanning through the token-protected admin endpoint.
 - Saved jobs and application status tracking (Interested, Applied, Interview, Offer, Rejected). These are stored in this browser's local storage and are not synced between devices/users.
 - Scheduled source collection, source/external-ID deduplication and optional Adzuna integration.
 - Token-protected manual collection endpoint.
@@ -40,16 +42,16 @@ ADZUNA_RADIUS_KM=25
 Then rebuild: `docker compose up --build -d`. Collection starts shortly after backend startup and repeats hourly. Adzuna is the only implemented live source; with no provider configured the app runs but will not show imported vacancies. Keep required Adzuna attribution and outbound links. Do not scrape or republish data unless source terms permit it.
 
 ## Manual collection
-Set a long random `JOBRADAR_ADMIN_TOKEN` in `.env` and restart. Call:
+Set a long random `JOBRADAR_ADMIN_TOKEN` in `.env` and restart. You can use the dashboard's **Scan city** button and enter this token, or call the API directly. For example, scan Pune:
 ```powershell
 $headers = @{ "X-JobRadar-Admin-Token" = "your-token" }
-Invoke-RestMethod -Method Post -Uri http://localhost:8081/api/admin/collect -Headers $headers
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8081/api/admin/collect?city=Pune' -Headers $headers
 ```
 The endpoint is disabled if the token is unset. Keep it secret.
 
 ## API
 - `GET /api/meta` — metadata and indexed job count.
-- `GET /api/jobs` — keyword, city, category, employmentType, experience, postedWithinHours, latitude, longitude, radiusKm and limit.
+- `GET /api/jobs` — keyword, city, category, employmentType, experience, postedWithinHours, latitude, longitude, radiusKm, minSalary, maxSalary, offset and limit (max 100 per request).
 - `POST /api/admin/collect` — manual collection; requires `X-JobRadar-Admin-Token`.
 
 ## Add another source

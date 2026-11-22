@@ -8,3 +8,8 @@
 .salary-filter input::placeholder{color:#72839a}.salary-value{color:#82ddb5;font-size:11px;font-weight:650;margin:4px 0}
 .scan-message{color:#8fd8b5}.pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:18px;color:#9fb1c9;font-size:11px}
 @media(max-width:650px){.salary-filter{flex:1}.salary-filter input{width:100px}.scan-button{grid-column:auto}}
+
+/* Keep both nearby and scan actions on the same toolbar row. */
+@media(min-width:901px){.search-row{grid-template-columns:minmax(190px,1fr) minmax(150px,.55fr) auto auto}}
+@media(min-width:651px) and (max-width:900px){.search-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.search-row .locate{grid-column:auto}}
+@media(max-width:650px){.search-row{grid-template-columns:1fr}.search-row .locate{grid-column:auto}}

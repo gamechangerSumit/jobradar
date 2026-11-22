@@ -13,8 +13,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Build backend
-        run: mvn -B -f backend/pom.xml package -DskipTests
+      - name: Verify backend and run tests
+        run: mvn -B -f backend/pom.xml verify
   frontend:
     runs-on: ubuntu-latest
     steps:
