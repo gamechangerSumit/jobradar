@@ -4,7 +4,7 @@ import {
   ExternalLink, RefreshCw, LocateFixed, WifiOff, Bookmark, BookmarkCheck,
   LayoutDashboard, ClipboardList, X, CheckCircle2, Filter
 } from 'lucide-react';
-import { fetchJobs, fetchMeta } from './api';
+import { fetchJobs, fetchMeta, triggerCollection } from './api';
 
 const categories = [
   'All categories','IT & Software','DevOps & Cloud','IT Support','Business & Management',
@@ -40,12 +40,19 @@ export default function App() {
   const [error,setError] = useState('');
   const [locMsg,setLocMsg] = useState('');
   const [statusFilter,setStatusFilter] = useState('');
+  const [minSalary,setMinSalary] = useState('');
+  const [maxSalary,setMaxSalary] = useState('');
+  const [page,setPage] = useState(0);
+  const [scanning,setScanning] = useState(false);
+  const [scanMessage,setScanMessage] = useState('');
 
   useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(workspace)); }, [workspace]);
+  useEffect(() => { setPage(0); },[keyword,city,category,type,hours,radius,minSalary,maxSalary]);
   const filters = useMemo(() => ({
     keyword, city, category, employmentType:type, postedWithinHours:hours,
+    minSalary, maxSalary, offset:page*20, limit:20,
     ...(coords && radius ? { latitude:coords.latitude, longitude:coords.longitude, radiusKm:radius } : {})
-  }),[keyword,city,category,type,hours,coords,radius]);
+  }),[keyword,city,category,type,hours,coords,radius,minSalary,maxSalary,page]);
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try { const [list,info] = await Promise.all([fetchJobs(filters),fetchMeta()]); setJobs(list); setMeta(info); }
@@ -72,6 +79,27 @@ export default function App() {
       if (!value) delete tracking[id]; else tracking[id] = value;
       return {...old,tracking};
     });
+  }
+  async function scanCity() {
+    const token = window.prompt('Enter the admin token configured in your local .env file.');
+    if (!token) return;
+    setScanning(true);
+    setScanMessage('Scanning ' + (city || 'configured city') + '…');
+    try {
+      const result = await triggerCollection(city,token);
+      setScanMessage('Scan completed for ' + result.city + ': ' + result.processed + ' listings processed.');
+      setPage(0);
+      await load();
+    } catch (e) {
+      setScanMessage(e.message || 'City scan failed. Check token and provider configuration.');
+    } finally { setScanning(false); }
+  }
+  function formatSalary(job) {
+    if (job.salaryMin == null && job.salaryMax == null) return null;
+    const currency = job.salaryCurrency || 'INR';
+    const fmt = value => new Intl.NumberFormat('en-IN',{style:'currency',currency,maximumFractionDigits:0}).format(value);
+    if (job.salaryMin != null && job.salaryMax != null) return fmt(job.salaryMin) + ' – ' + fmt(job.salaryMax);
+    return job.salaryMin != null ? 'From ' + fmt(job.salaryMin) : 'Up to ' + fmt(job.salaryMax);
   }
   function locate() {
     if (!navigator.geolocation) { setLocMsg('Browser location is unavailable.'); return; }
@@ -101,13 +129,16 @@ export default function App() {
       </section>
       {view==='discover' && <section className="panel">
         <div className="panel-head"><div><h2>Explore opportunities</h2><p>Search by role, company, skill, industry or location.</p></div><span className="status"><i/>SOURCE CONNECTORS</span></div>
-        <div className="search-row"><label className="search"><Search size={17}/><input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="Job title, company or skill"/></label><label className="city"><MapPin size={16}/><input value={city} onChange={e=>setCity(e.target.value)} placeholder="City or area"/></label><button className="locate" onClick={locate}><LocateFixed size={15}/>Near me</button></div>
+        <div className="search-row"><label className="search"><Search size={17}/><input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="Job title, company or skill"/></label><label className="city"><MapPin size={16}/><input value={city} onChange={e=>setCity(e.target.value)} placeholder="City or area"/></label><button className="locate" onClick={locate}><LocateFixed size={15}/>Near me</button><button className="locate scan-button" onClick={scanCity} disabled={scanning}><RefreshCw size={15}/>{scanning ? "Scanning…" : "Scan city"}</button></div>
         {locMsg && <div className="loc-msg">{locMsg}</div>}
+        {scanMessage && <div className="loc-msg scan-message">{scanMessage}</div>}
         <div className="filters">
           <label><SlidersHorizontal size={14}/><select value={category} onChange={e=>setCategory(e.target.value)}>{categories.map((c,i)=><option key={c} value={i===0?'':c}>{c}</option>)}</select></label>
           <label><select value={type} onChange={e=>setType(e.target.value)}><option value="">Any employment type</option>{['Full-time','Part-time','Contract','Internship','Temporary','Freelance'].map(x=><option key={x}>{x}</option>)}</select></label>
           <label><select value={hours} onChange={e=>setHours(e.target.value)}><option value="">Any posting date</option><option value="24">Last 24 hours</option><option value="72">Last 3 days</option><option value="168">Last 7 days</option><option value="720">Last 30 days</option></select></label>
           <label><select value={radius} onChange={e=>setRadius(e.target.value)} disabled={!coords}><option value="">Any distance</option>{[5,10,25,50,100].map(x=><option value={x} key={x}>Within {x} km</option>)}</select></label>
+          <label className="salary-filter"><span>Min ₹</span><input type="number" min="0" value={minSalary} onChange={e=>setMinSalary(e.target.value)} placeholder="Min salary"/></label>
+          <label className="salary-filter"><span>Max ₹</span><input type="number" min="0" value={maxSalary} onChange={e=>setMaxSalary(e.target.value)} placeholder="Max salary"/></label>
         </div>
       </section>}
       <section className="results">
@@ -123,7 +154,7 @@ export default function App() {
             <div className="job-top"><span className="category">{job.category||'Other'}</span><time>{age(job.postedAt||job.discoveredAt)}</time></div>
             <h3>{job.title}</h3><div className="company">{job.company||'Company not provided'}</div>
             <div className="details"><span><MapPin size={13}/>{job.location||job.city||'Location not provided'}</span>{job.employmentType&&<span>{job.employmentType}</span>}{job.experienceLevel&&<span>{job.experienceLevel}</span>}{job.distanceKm!=null&&<span>{job.distanceKm.toFixed(1)} km away</span>}</div>
-            <p className="description">{job.description||'No description provided by source.'}</p>
+            <p className="description">{job.description||'No description provided by source.'}</p>{formatSalary(job)&&<div className="salary-value">{formatSalary(job)}</div>}
             <div className="job-foot">{job.source==='Adzuna'?<a className="adzuna-attribution" href="https://www.adzuna.in/" target="_blank" rel="noreferrer">Adzuna</a>:<small>SOURCE · {job.source}</small>}
               {workspace.tracking[job.id]&&<span className="tracked-label">{workspace.tracking[job.id]}</span>}
             </div>
@@ -134,6 +165,11 @@ export default function App() {
             <a className="apply" href={job.applyUrl||'#'} target="_blank" rel="noreferrer">Apply <ExternalLink size={14}/></a>
           </div>
         </article>)}</div>}
+        {!error && view==='discover' && <div className="pagination">
+          <button className="locate" onClick={()=>setPage(p=>Math.max(0,p-1))} disabled={page===0 || loading}>Previous</button>
+          <span>Page {page+1}</span>
+          <button className="locate" onClick={()=>setPage(p=>p+1)} disabled={jobs.length<20 || loading}>Next</button>
+        </div>}
       </section>
       <footer>JobRadar AI · Discover responsibly across every category.<span>Listings: {meta?.totalJobs??'—'} · Workspace is browser-local</span></footer>
     </main>

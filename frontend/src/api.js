@@ -17,3 +17,12 @@ export function fetchJobs(filters = {}) {
   });
   return request('/jobs?' + params.toString());
 }
+
+export function triggerCollection(city, token) {
+  const params = new URLSearchParams();
+  if (city) params.set('city', city);
+  return request('/admin/collect?' + params.toString(), {
+    method: 'POST',
+    headers: { 'X-JobRadar-Admin-Token': token }
+  });
+}
