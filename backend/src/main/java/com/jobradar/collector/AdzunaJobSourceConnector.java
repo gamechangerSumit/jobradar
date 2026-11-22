@@ -25,10 +25,12 @@ public class AdzunaJobSourceConnector implements JobSourceConnector {
   @Value("${jobradar.sources.adzuna.radius-km:25}") int radiusKm
  ){this.appId=appId;this.appKey=appKey;this.country=country;this.city=city;this.radiusKm=radiusKm;}
  @Override public String sourceName(){return "Adzuna";}
- @Override public List<JobListing> fetchJobs(){
+ @Override public List<JobListing> fetchJobs(){ return fetchJobs(city); }
+ @Override public List<JobListing> fetchJobs(String requestedCity){
+  String searchCity=(requestedCity==null||requestedCity.isBlank())?city:requestedCity.trim();
   if(appId.isBlank()||appKey.isBlank())return List.of();
   String url=UriComponentsBuilder.fromUriString("https://api.adzuna.com/v1/api/jobs/{country}/search/1")
-   .queryParam("app_id",appId).queryParam("app_key",appKey).queryParam("where",city)
+   .queryParam("app_id",appId).queryParam("app_key",appKey).queryParam("where",searchCity)
    .queryParam("distance",radiusKm).queryParam("results_per_page",50)
    .queryParam("sort_by","date").queryParam("content-type","application/json")
    .buildAndExpand(country).encode().toUriString();
@@ -40,7 +42,7 @@ public class AdzunaJobSourceConnector implements JobSourceConnector {
    if(externalId.isBlank()||title.isBlank())continue;
    JobListing job=new JobListing();job.setExternalId(externalId);job.setTitle(title);
    job.setCompany(item.path("company").path("display_name").asText(null));
-   job.setLocation(item.path("location").path("display_name").asText(city));job.setCity(city);
+   job.setLocation(item.path("location").path("display_name").asText(searchCity));job.setCity(searchCity);
    JsonNode areas=item.path("location").path("area");
    if(areas.isArray()&&areas.size()>0)job.setArea(areas.get(areas.size()-1).asText(null));
    String providerCategory=item.path("category").path("label").asText("Other");
@@ -48,6 +50,9 @@ public class AdzunaJobSourceConnector implements JobSourceConnector {
    String contractTime=item.path("contract_time").asText(""),contractType=item.path("contract_type").asText("");
    job.setEmploymentType(!contractTime.isBlank()?contractTime:contractType);
    job.setDescription(item.path("description").asText(""));
+   if(item.hasNonNull("salary_min"))job.setSalaryMin(item.path("salary_min").asDouble());
+   if(item.hasNonNull("salary_max"))job.setSalaryMax(item.path("salary_max").asDouble());
+   if(job.getSalaryMin()!=null||job.getSalaryMax()!=null)job.setSalaryCurrency("INR");
    job.setApplyUrl(item.path("redirect_url").asText(null));
    if(item.hasNonNull("latitude"))job.setLatitude(item.path("latitude").asDouble());
    if(item.hasNonNull("longitude"))job.setLongitude(item.path("longitude").asDouble());
