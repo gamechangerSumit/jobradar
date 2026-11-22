@@ -15,18 +15,19 @@ Multi-category job discovery for Pune, nearby localities and other selectable ci
 4. API metadata: http://localhost:8080/api/meta
 5. Health: http://localhost:8080/actuator/health
 
+## Adzuna live job source
+1. Register for an API ID and key at https://developer.adzuna.com/.
+2. Add them to `.env` as `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
+3. Set `ADZUNA_ENABLED=true`, then rebuild with `docker compose up --build -d`.
+4. The collector queries Pune and a configurable nearby radius once per hour, normalizes categories, and stores results by stable source ID.
+
+The Adzuna connector is disabled until credentials are supplied. The official API is intended for evaluation on its free tier; confirm your account limits and current terms. Displayed Adzuna listings must retain the required Adzuna attribution and outbound link.
+
 ## Search API
-`GET /api/jobs` supports keyword, city, category, employmentType, experience, postedWithinHours, latitude, longitude, radiusKm and limit.
+`GET /api/jobs` supports keyword, city, category, employmentType, experience, postedWithinHours, latitude, longitude, radiusKm and limit. Radius filtering requires listing coordinates; text-based city/locality search remains available.
 
-Examples:
-- `/api/jobs?city=Pune&category=DevOps&postedWithinHours=168`
-- `/api/jobs?city=Hinjewadi&keyword=technician`
-- `/api/jobs?latitude=18.5204&longitude=73.8567&radiusKm=10`
-
-## Live data
-The scheduled collector and `JobSourceConnector` interface are ready, but no live provider is enabled yet. Implement a provider using an API, RSS/feed, or company career integration whose terms permit collection. Each record should have a stable external ID and normalized location/category. Do not assume unrestricted scraping or fabricate vacancies.
-
-Radius filtering requires coordinates on each listing; text-based city/locality search works without geocoding. Add a permitted geocoder to enrich records when necessary.
+## More sources
+Implement additional permitted API/RSS/company-career providers through `JobSourceConnector`. Do not assume unrestricted scraping or fabricate vacancies.
 
 ## Production
 Add authentication, HTTPS, secrets management, rate limiting, restrictive CORS and private database networking before public deployment.

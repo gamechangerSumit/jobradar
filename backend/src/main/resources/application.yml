@@ -26,6 +26,7 @@ jobradar:
     initial-delay-ms: ${JOBRADAR_COLLECTION_INITIAL_DELAY_MS:30000}
   sources:
     adzuna:
+      enabled: ${ADZUNA_ENABLED:false}
       app-id: ${ADZUNA_APP_ID:}
       app-key: ${ADZUNA_APP_KEY:}
       country: ${ADZUNA_COUNTRY:in}
