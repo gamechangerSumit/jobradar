@@ -4,7 +4,7 @@ import {
   ExternalLink, RefreshCw, LocateFixed, WifiOff, Bookmark, BookmarkCheck,
   LayoutDashboard, ClipboardList, X, CheckCircle2, Filter
 } from 'lucide-react';
-import { fetchJobs, fetchMeta, triggerCollection } from './api';
+import { fetchJobs, fetchMeta, triggerCollection, fetchWorkspace, saveFavorite, removeFavorite, updateApplication, removeApplication } from './api';
 
 const categories = [
   'All categories','IT & Software','DevOps & Cloud','IT Support','Business & Management',
@@ -47,6 +47,7 @@ export default function App() {
   const [scanMessage,setScanMessage] = useState('');
 
   useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(workspace)); }, [workspace]);
+  useEffect(() => { fetchWorkspace().then(data => setWorkspace({saved:data.saved||[],tracking:data.tracking||{}})).catch(e => setError('Could not load account workspace: '+e.message)); }, []);
   useEffect(() => { setPage(0); },[keyword,city,category,type,hours,radius,minSalary,maxSalary]);
   const filters = useMemo(() => ({
     keyword, city, category, employmentType:type, postedWithinHours:hours,
@@ -70,15 +71,14 @@ export default function App() {
     if (statusFilter) result = result.filter(job => workspace.tracking[job.id] === statusFilter);
     return result;
   },[jobs,view,workspace,statusFilter]);
-  function toggleSaved(id) {
-    setWorkspace(old => ({...old,saved:old.saved.includes(id)?old.saved.filter(x=>x!==id):[...old.saved,id]}));
+  async function toggleSaved(id) {
+    const exists=workspace.saved.includes(id);
+    try { if(exists) await removeFavorite(id); else await saveFavorite(id); setWorkspace(old => ({...old,saved:exists?old.saved.filter(x=>x!==id):[...old.saved,id]})); }
+    catch(e) { setError(e.message||'Could not update saved jobs.'); }
   }
-  function updateStatus(id,value) {
-    setWorkspace(old => {
-      const tracking = {...old.tracking};
-      if (!value) delete tracking[id]; else tracking[id] = value;
-      return {...old,tracking};
-    });
+  async function updateStatus(id,value) {
+    try { if(value) await updateApplication(id,value); else await removeApplication(id); setWorkspace(old => { const tracking={...old.tracking}; if(!value) delete tracking[id]; else tracking[id]=value; return {...old,tracking}; }); }
+    catch(e) { setError(e.message||'Could not update application status.'); }
   }
   async function scanCity() {
     const token = window.prompt('Enter the admin token configured in your local .env file.');
@@ -118,13 +118,13 @@ export default function App() {
       <button className={'nav '+(view==='saved'?'active':'')} onClick={()=>setView('saved')}><Bookmark size={17}/>Saved jobs <span className="nav-count">{workspace.saved.length}</span></button>
       <button className={'nav '+(view==='tracker'?'active':'')} onClick={()=>setView('tracker')}><ClipboardList size={17}/>Application tracker <span className="nav-count">{trackedCount}</span></button>
       <div className="side-note"><i/><div><b>Automatic discovery</b><small>Configured sources poll hourly</small></div></div>
-      <div className="profile"><div className="avatar">JR</div><div><b>Personal workspace</b><small>Saved locally in this browser</small></div></div>
+      <div className="profile"><div className="avatar">JR</div><div><b>Personal workspace</b><small>Synced to your account</small></div></div>
     </aside>
     <main>
       <header className="header"><div><div className="eyebrow">JOB DISCOVERY / {view.toUpperCase()}</div><h1>Find your next opportunity.</h1><p>Explore jobs across industries, cities and nearby locations.</p></div><button className="refresh" onClick={load} disabled={loading}><RefreshCw size={15}/>Refresh</button></header>
       <section className="stats">
         <div className="stat"><span className="stat-icon blue"><BriefcaseBusiness size={17}/></span><small>Jobs in database</small><strong>{(meta?.totalJobs||0).toLocaleString()}</strong><em>Across connected sources</em></div>
-        <div className="stat"><span className="stat-icon purple"><BookmarkCheck size={17}/></span><small>Saved opportunities</small><strong>{workspace.saved.length}</strong><em>Stored on this browser</em></div>
+        <div className="stat"><span className="stat-icon purple"><BookmarkCheck size={17}/></span><small>Saved opportunities</small><strong>{workspace.saved.length}</strong><em>Synced to your account</em></div>
         <div className="stat"><span className="stat-icon green"><ClipboardList size={17}/></span><small>Applications tracked</small><strong>{trackedCount}</strong><em>Interested through offer</em></div>
       </section>
       {view==='discover' && <section className="panel">
@@ -147,7 +147,7 @@ export default function App() {
         </div>
         {error ? <div className="empty error"><WifiOff/><b>Backend connection issue</b><p>{error}. Start Docker Compose and refresh.</p></div>
         : loading ? <div className="empty"><RefreshCw/>Loading opportunities…</div>
-        : visibleJobs.length===0 ? <div className="empty"><Search/><b>{view==='saved'?'No saved jobs yet':view==='tracker'?'No applications tracked yet':'No matching jobs yet'}</b><p>{view==='discover'?'Connect an authorized job source in backend configuration to discover real vacancies.': 'Save a job or set its application status from Discover jobs. Your workspace is saved in this browser.'}</p><button className="empty-action" onClick={()=>setView('discover')}>Explore jobs</button></div>
+        : visibleJobs.length===0 ? <div className="empty"><Search/><b>{view==='saved'?'No saved jobs yet':view==='tracker'?'No applications tracked yet':'No matching jobs yet'}</b><p>{view==='discover'?'Connect an authorized job source in backend configuration to discover real vacancies.': 'Save a job or set its application status from Discover jobs. Your workspace is synced to your account.'}</p><button className="empty-action" onClick={()=>setView('discover')}>Explore jobs</button></div>
         : <div className="job-list">{visibleJobs.map(job=><article className="job" key={job.id}>
           <div className="company-icon">{(job.company||job.source||'J').slice(0,1).toUpperCase()}</div>
           <div className="job-main">
@@ -171,7 +171,7 @@ export default function App() {
           <button className="locate" onClick={()=>setPage(p=>p+1)} disabled={jobs.length<20 || loading}>Next</button>
         </div>}
       </section>
-      <footer>JobRadar AI · Discover responsibly across every category.<span>Listings: {meta?.totalJobs??'—'} · Workspace is browser-local</span></footer>
+      <footer>JobRadar AI · Discover responsibly across every category.<span>Listings: {meta?.totalJobs??'—'} · Account workspace</span></footer>
     </main>
   </div>;
 }
