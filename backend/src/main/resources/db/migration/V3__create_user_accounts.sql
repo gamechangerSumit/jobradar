@@ -1,0 +1,7 @@
+CREATE TABLE user_accounts (
+ id BIGSERIAL PRIMARY KEY,
+ email VARCHAR(254) NOT NULL UNIQUE,
+ full_name VARCHAR(120) NOT NULL,
+ password_hash VARCHAR(100) NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -5,5 +5,7 @@ import org.springframework.web.servlet.config.annotation.*;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
  @Value("${jobradar.cors.allowed-origins:http://localhost:5173}") private String origins;
- @Override public void addCorsMappings(CorsRegistry registry){registry.addMapping("/api/**").allowedOrigins(origins.split(",")).allowedMethods("GET","POST","OPTIONS").allowedHeaders("*");}
+ @Override public void addCorsMappings(CorsRegistry registry){
+  registry.addMapping("/api/**").allowedOrigins(origins.split(",")).allowedMethods("GET","POST","PUT","DELETE","OPTIONS").allowedHeaders("*").exposedHeaders("Authorization");
+ }
 }
