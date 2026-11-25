@@ -7,6 +7,7 @@ async function request(path,options={}){const headers={...(options.headers||{})}
 export function registerAccount(payload){return request('/auth/register',{method:'POST',body:JSON.stringify(payload)})}
 export function loginAccount(payload){return request('/auth/login',{method:'POST',body:JSON.stringify(payload)})}
 export function fetchWorkspace(){return request('/workspace')}
+export function fetchWorkspaceJobs(view){return request('/workspace/'+(view==='saved'?'saved-jobs':'tracked-jobs'))}
 export function saveFavorite(id){return request('/workspace/favorites/'+id,{method:'POST'})}
 export function removeFavorite(id){return request('/workspace/favorites/'+id,{method:'DELETE'})}
 export function updateApplication(id,status){return request('/workspace/applications/'+id,{method:'PUT',body:JSON.stringify({status})})}

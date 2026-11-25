@@ -4,7 +4,7 @@ import {
   ExternalLink, RefreshCw, LocateFixed, WifiOff, Bookmark, BookmarkCheck,
   LayoutDashboard, ClipboardList, X, CheckCircle2, Filter
 } from 'lucide-react';
-import { fetchJobs, fetchMeta, triggerCollection, fetchWorkspace, saveFavorite, removeFavorite, updateApplication, removeApplication } from './api';
+import { fetchJobs, fetchMeta, triggerCollection, fetchWorkspace, fetchWorkspaceJobs, saveFavorite, removeFavorite, updateApplication, removeApplication } from './api';
 
 const categories = [
   'All categories','IT & Software','DevOps & Cloud','IT Support','Business & Management',
@@ -28,6 +28,7 @@ export default function App() {
   const [jobs,setJobs] = useState([]);
   const [meta,setMeta] = useState(null);
   const [workspace,setWorkspace] = useState(readWorkspace);
+  const [workspaceJobs,setWorkspaceJobs] = useState([]);
   const [view,setView] = useState('discover');
   const [keyword,setKeyword] = useState('');
   const [category,setCategory] = useState('');
@@ -48,6 +49,7 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(workspace)); }, [workspace]);
   useEffect(() => { fetchWorkspace().then(data => setWorkspace({saved:data.saved||[],tracking:data.tracking||{}})).catch(e => setError('Could not load account workspace: '+e.message)); }, []);
+  useEffect(() => { if(view==='saved'||view==='tracker') fetchWorkspaceJobs(view).then(setWorkspaceJobs).catch(e => setError('Could not load your saved jobs: '+e.message)); }, [view,workspace]);
   useEffect(() => { setPage(0); },[keyword,city,category,type,hours,radius,minSalary,maxSalary]);
   const filters = useMemo(() => ({
     keyword, city, category, employmentType:type, postedWithinHours:hours,
@@ -65,12 +67,10 @@ export default function App() {
   const savedIds = new Set(workspace.saved);
   const trackedCount = Object.keys(workspace.tracking).length;
   const visibleJobs = useMemo(() => {
-    let result = jobs;
-    if (view === 'saved') result = result.filter(job => savedIds.has(job.id));
-    if (view === 'tracker') result = result.filter(job => workspace.tracking[job.id]);
+    let result = view === 'saved' || view === 'tracker' ? workspaceJobs : jobs;
     if (statusFilter) result = result.filter(job => workspace.tracking[job.id] === statusFilter);
     return result;
-  },[jobs,view,workspace,statusFilter]);
+  },[jobs,workspaceJobs,view,workspace,statusFilter]);
   async function toggleSaved(id) {
     const exists=workspace.saved.includes(id);
     try { if(exists) await removeFavorite(id); else await saveFavorite(id); setWorkspace(old => ({...old,saved:exists?old.saved.filter(x=>x!==id):[...old.saved,id]})); }

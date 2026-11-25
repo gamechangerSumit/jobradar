@@ -21,8 +21,8 @@ public class JobService {
   if(has(type)){String p="%"+type.trim().toLowerCase(Locale.ROOT)+"%";spec=spec.and((r,q,cb)->cb.like(cb.lower(r.get("employmentType")),p));}
   if(has(experience)){String p="%"+experience.trim().toLowerCase(Locale.ROOT)+"%";spec=spec.and((r,q,cb)->cb.like(cb.lower(r.get("experienceLevel")),p));}
   if(hours!=null&&hours>0){OffsetDateTime cutoff=OffsetDateTime.now().minusHours(hours);spec=spec.and((r,q,cb)->cb.greaterThanOrEqualTo(r.get("postedAt"),cutoff));}
-  if(minSalary!=null&&minSalary>0)spec=spec.and((r,q,cb)->cb.or(cb.greaterThanOrEqualTo(r.get("salaryMax"),minSalary.doubleValue()),cb.greaterThanOrEqualTo(r.get("salaryMin"),minSalary.doubleValue())));
-  if(maxSalary!=null&&maxSalary>0)spec=spec.and((r,q,cb)->cb.or(cb.lessThanOrEqualTo(r.get("salaryMin"),maxSalary.doubleValue()),cb.lessThanOrEqualTo(r.get("salaryMax"),maxSalary.doubleValue())));
+  if(minSalary!=null&&minSalary>0)spec=spec.and((r,q,cb)->cb.and(cb.equal(cb.upper(r.get("salaryCurrency")),"INR"),cb.or(cb.greaterThanOrEqualTo(r.get("salaryMax"),minSalary.doubleValue()),cb.greaterThanOrEqualTo(r.get("salaryMin"),minSalary.doubleValue()))));
+  if(maxSalary!=null&&maxSalary>0)spec=spec.and((r,q,cb)->cb.and(cb.equal(cb.upper(r.get("salaryCurrency")),"INR"),cb.or(cb.lessThanOrEqualTo(r.get("salaryMin"),maxSalary.doubleValue()),cb.lessThanOrEqualTo(r.get("salaryMax"),maxSalary.doubleValue()))));
   boolean coords=latitude!=null&&longitude!=null,rad=coords&&radiusKm!=null&&radiusKm>0;List<JobListing> matches=repository.findAll(spec,Sort.by(Sort.Order.desc("postedAt"),Sort.Order.desc("discoveredAt")));
   if(rad)matches=matches.stream().filter(j->j.getLatitude()!=null&&j.getLongitude()!=null).filter(j->GeoDistance.betweenKm(latitude,longitude,j.getLatitude(),j.getLongitude())<=radiusKm).toList();
   int safeOffset=Math.max(0,Math.min(offset,100000)),safeLimit=Math.max(1,Math.min(limit,100));
