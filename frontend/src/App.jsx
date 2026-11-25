@@ -155,7 +155,7 @@ export default function App() {
             <h3>{job.title}</h3><div className="company">{job.company||'Company not provided'}</div>
             <div className="details"><span><MapPin size={13}/>{job.location||job.city||'Location not provided'}</span>{job.employmentType&&<span>{job.employmentType}</span>}{job.experienceLevel&&<span>{job.experienceLevel}</span>}{job.distanceKm!=null&&<span>{job.distanceKm.toFixed(1)} km away</span>}</div>
             <p className="description">{job.description||'No description provided by source.'}</p>{formatSalary(job)&&<div className="salary-value">{formatSalary(job)}</div>}
-            <div className="job-foot">{job.source==='Adzuna'?<a className="adzuna-attribution" href="https://www.adzuna.in/" target="_blank" rel="noreferrer">Adzuna</a>:<small>SOURCE · {job.source}</small>}
+            <div className="job-foot">{job.source==='Adzuna'?<a className="adzuna-attribution" href="https://www.adzuna.in/" target="_blank" rel="noreferrer">Adzuna</a>:job.source==='RemoteOK'?<a className="source-attribution" href="https://remoteok.com/" target="_blank" rel="noreferrer">Remote OK</a>:job.source==='Arbeitnow'?<a className="source-attribution" href="https://www.arbeitnow.com/" target="_blank" rel="noreferrer">Arbeitnow</a>:<small>SOURCE · {job.source}</small>}
               {workspace.tracking[job.id]&&<span className="tracked-label">{workspace.tracking[job.id]}</span>}
             </div>
           </div>

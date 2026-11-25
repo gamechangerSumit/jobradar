@@ -37,3 +37,7 @@ jobradar:
       country: ${ADZUNA_COUNTRY:in}
       city: ${ADZUNA_CITY:Pune}
       radius-km: ${ADZUNA_RADIUS_KM:25}
+    remoteok:
+      enabled: ${JOBRADAR_REMOTEOK_ENABLED:true}
+    arbeitnow:
+      enabled: ${JOBRADAR_ARBEITNOW_ENABLED:true}
