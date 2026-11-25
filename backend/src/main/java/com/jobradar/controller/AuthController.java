@@ -20,15 +20,16 @@ public class AuthController {
  public AuthController(UserAccountRepository users,PasswordEncoder encoder,JwtService jwt,AuthRateLimiter rateLimiter){this.users=users;this.encoder=encoder;this.jwt=jwt;this.rateLimiter=rateLimiter;}
  @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED)
  public Map<String,Object> register(@Valid @RequestBody RegisterRequest r,HttpServletRequest request){
-  rateLimiter.check(request.getRemoteAddr()+":register");
+  rateLimiter.check(clientIp(request)+":register");
   String email=r.email().trim().toLowerCase(Locale.ROOT);
   if(users.existsByEmailIgnoreCase(email))throw new ResponseStatusException(HttpStatus.CONFLICT,"An account with this email already exists.");
   return response(users.save(new UserAccount(email,r.fullName().trim(),encoder.encode(r.password()))));
  }
  @PostMapping("/login") public Map<String,Object> login(@Valid @RequestBody LoginRequest r,HttpServletRequest request){
-  rateLimiter.check(request.getRemoteAddr()+":login");
+  rateLimiter.check(clientIp(request)+":login");
   UserAccount u=users.findByEmailIgnoreCase(r.email().trim()).filter(x->encoder.matches(r.password(),x.getPasswordHash())).orElseThrow(()->new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invalid email or password."));
   return response(u);
  }
+ private String clientIp(HttpServletRequest request){String forwarded=request.getHeader("X-Real-IP");return forwarded==null||forwarded.isBlank()?request.getRemoteAddr():forwarded.trim();}
  private Map<String,Object> response(UserAccount u){return Map.of("token",jwt.generate(u.getEmail()),"tokenType","Bearer","userId",u.getId(),"email",u.getEmail(),"fullName",u.getFullName());}
 }
