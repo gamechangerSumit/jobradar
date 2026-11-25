@@ -8,7 +8,7 @@ Multi-category job discovery for Pune, nearby localities and other selectable ci
 - Optional browser geolocation and radius filtering when listings have coordinates.
 - Salary range extraction and min/max salary filters when the provider supplies salary data.
 - Paginated discovery (20 results per page) and on-demand city scanning through the token-protected admin endpoint.
-- User registration/login with BCrypt password hashing and JWT authentication.
+- User registration/login with BCrypt password hashing, JWT authentication and per-IP authentication throttling.
 - Per-account saved jobs and application status tracking (Interested, Applied, Interview, Offer, Rejected), persisted in PostgreSQL.
 - Scheduled source collection, source/external-ID deduplication, Remote OK and Arbeitnow public feeds, plus optional Adzuna integration.
 - Nginx reverse proxy, API health check and GitHub Actions CI.
@@ -57,4 +57,4 @@ Set a long random JOBRADAR_ADMIN_TOKEN in .env and restart. You can use the dash
 - PUT/DELETE /api/workspace/applications/{jobId} — manage application status.
 
 ## Production checklist
-Before public deployment add HTTPS, managed secrets, authentication rate limiting, email verification/password reset, restrictive CORS, private DB networking, backups, monitoring and provider compliance review. Use secure HttpOnly cookies rather than localStorage for browser token storage in a hardened production deployment. The project still needs a deployed runtime smoke test.
+Before public deployment add HTTPS, managed secrets, authentication rate limiting, email verification/password reset, restrictive CORS, private DB networking, backups, monitoring and provider compliance review. Use secure HttpOnly cookies rather than localStorage for browser token storage in a hardened production deployment. Authentication attempts are throttled per IP in each backend instance; use shared Redis-backed throttling before scaling horizontally. The project still needs a deployed runtime smoke test.

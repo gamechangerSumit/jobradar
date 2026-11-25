@@ -5,12 +5,15 @@ import com.jobradar.repository.JobListingRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 @Service @Transactional(readOnly=true)
 public class JobService {
+ private static final Sort NEWEST=Sort.by(Sort.Order.desc("postedAt"),Sort.Order.desc("discoveredAt"));
  private final JobListingRepository repository;
  public JobService(JobListingRepository repository){this.repository=repository;}
  public List<JobResponse> search(String keyword,String city,String category,String type,String experience,Integer hours,Double latitude,Double longitude,Double radiusKm,Integer minSalary,Integer maxSalary,int offset,int limit){
@@ -23,10 +26,20 @@ public class JobService {
   if(hours!=null&&hours>0){OffsetDateTime cutoff=OffsetDateTime.now().minusHours(hours);spec=spec.and((r,q,cb)->cb.greaterThanOrEqualTo(r.get("postedAt"),cutoff));}
   if(minSalary!=null&&minSalary>0)spec=spec.and((r,q,cb)->cb.and(cb.equal(cb.upper(r.get("salaryCurrency")),"INR"),cb.or(cb.greaterThanOrEqualTo(r.get("salaryMax"),minSalary.doubleValue()),cb.greaterThanOrEqualTo(r.get("salaryMin"),minSalary.doubleValue()))));
   if(maxSalary!=null&&maxSalary>0)spec=spec.and((r,q,cb)->cb.and(cb.equal(cb.upper(r.get("salaryCurrency")),"INR"),cb.or(cb.lessThanOrEqualTo(r.get("salaryMin"),maxSalary.doubleValue()),cb.lessThanOrEqualTo(r.get("salaryMax"),maxSalary.doubleValue()))));
-  boolean coords=latitude!=null&&longitude!=null,rad=coords&&radiusKm!=null&&radiusKm>0;List<JobListing> matches=repository.findAll(spec,Sort.by(Sort.Order.desc("postedAt"),Sort.Order.desc("discoveredAt")));
-  if(rad)matches=matches.stream().filter(j->j.getLatitude()!=null&&j.getLongitude()!=null).filter(j->GeoDistance.betweenKm(latitude,longitude,j.getLatitude(),j.getLongitude())<=radiusKm).toList();
+  boolean coords=latitude!=null&&longitude!=null,rad=coords&&radiusKm!=null&&radiusKm>0;
   int safeOffset=Math.max(0,Math.min(offset,100000)),safeLimit=Math.max(1,Math.min(limit,100));
-  return matches.stream().skip(safeOffset).limit(safeLimit).map(j->JobResponse.from(j,coords&&j.getLatitude()!=null&&j.getLongitude()!=null?GeoDistance.betweenKm(latitude,longitude,j.getLatitude(),j.getLongitude()):null)).toList();
+  List<JobListing> matches;
+  if(rad){
+   matches=repository.findAll(spec,NEWEST).stream()
+    .filter(j->j.getLatitude()!=null&&j.getLongitude()!=null)
+    .filter(j->GeoDistance.betweenKm(latitude,longitude,j.getLatitude(),j.getLongitude())<=radiusKm)
+    .skip(safeOffset).limit(safeLimit).toList();
+  }else{
+   int page=safeOffset/safeLimit,remainder=safeOffset%safeLimit;
+   Page<JobListing> result=repository.findAll(spec,PageRequest.of(page,safeLimit,NEWEST));
+   matches=result.getContent().stream().skip(remainder).toList();
+  }
+  return matches.stream().map(j->JobResponse.from(j,coords&&j.getLatitude()!=null&&j.getLongitude()!=null?GeoDistance.betweenKm(latitude,longitude,j.getLatitude(),j.getLongitude()):null)).toList();
  }
  public long count(){return repository.count();}
  private boolean has(String v){return v!=null&&!v.isBlank();}
