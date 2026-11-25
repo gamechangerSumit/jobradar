@@ -68,7 +68,7 @@ export default function App() {
   const trackedCount = Object.keys(workspace.tracking).length;
   const visibleJobs = useMemo(() => {
     let result = view === 'saved' || view === 'tracker' ? workspaceJobs : jobs;
-    if (statusFilter) result = result.filter(job => workspace.tracking[job.id] === statusFilter);
+    if (view === 'tracker' && statusFilter) result = result.filter(job => workspace.tracking[job.id] === statusFilter);
     return result;
   },[jobs,workspaceJobs,view,workspace,statusFilter]);
   async function toggleSaved(id) {

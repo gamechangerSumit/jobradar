@@ -20,7 +20,7 @@ management:
         include: health,info
 jobradar:
   security:
-    jwt-secret: ${JOBRADAR_JWT_SECRET:local-development-secret-change-this-32chars-minimum}
+    jwt-secret: ${JOBRADAR_JWT_SECRET:}
     expiration-hours: ${JOBRADAR_JWT_EXPIRATION_HOURS:24}
   admin:
     token: ${JOBRADAR_ADMIN_TOKEN:}
