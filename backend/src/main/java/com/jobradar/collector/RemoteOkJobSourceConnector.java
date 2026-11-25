@@ -16,7 +16,8 @@ public class RemoteOkJobSourceConnector implements JobSourceConnector {
   if(body==null||!body.isArray())return out;
   for(JsonNode x:body){String id=x.path("id").asText(""),title=x.path("position").asText("");if(id.isBlank()||title.isBlank())continue;
    JobListing j=new JobListing();j.setExternalId(id);j.setTitle(title);j.setCompany(x.path("company").asText(null));j.setCity("Remote");
-   String loc=x.path("location").asText("Worldwide remote");j.setLocation(loc.isBlank()?"Worldwide remote":loc+" · Remote");j.setCategory(category(title+" "+x.path("tags").toString()));j.setEmploymentType("Remote");j.setDescription(x.path("description").asText(""));j.setApplyUrl(x.path("url").asText(null));
+   String loc=x.path("location").asText("Worldwide remote");j.setLocation(loc.isBlank()?"Worldwide remote":loc+" · Remote");j.setCategory(category(title+" "+x.path("tags").toString()));j.setEmploymentType("Remote");
+   String description=x.path("description").asText("");j.setDescription(description.length()>3900?description.substring(0,3900):description);j.setApplyUrl(x.path("url").asText(null));
    if(x.path("salary_min").isNumber())j.setSalaryMin(x.path("salary_min").asDouble());if(x.path("salary_max").isNumber())j.setSalaryMax(x.path("salary_max").asDouble());if(j.getSalaryMin()!=null||j.getSalaryMax()!=null)j.setSalaryCurrency("USD");
    String date=x.path("date").asText("");if(!date.isBlank())try{j.setPostedAt(OffsetDateTime.parse(date));}catch(Exception ignored){}out.add(j);
   }return out;
